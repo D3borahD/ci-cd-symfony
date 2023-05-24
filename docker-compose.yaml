@@ -1,0 +1,87 @@
+# args versio
+# mettre une option par defaut
+version: '3.4'
+
+services:
+  apache:
+    build: docker/apache
+    container_name: app_apache
+    ports:
+      - 8181:80
+    volumes:
+      - ./docker/config/vhosts:/etc/apache2/sites-enabled
+      - .:/home/wwwroot/app
+    depends_on:
+      - php
+
+  database:
+    # for run on M1 chip args
+    platform: ${M1_CHIP}
+    # args version
+    # args type de BDD
+    image: mysql:5.7
+    container_name: app_database
+    restart: always
+    # args port et ports expose
+    ports:
+        - 8383:3306
+    volumes:
+      -   ./docker/data/db:/var/lib/mysql
+    environment:
+      # args
+      MYSQL_ROOT_PASSWORD: root
+      # args
+      MYSQL_DATABASE: app_db
+      # args
+      MYSQL_USER: app_db_user
+      # args
+      MYSQL_PASSWORD: app_db_password
+
+  php:
+    build:
+      context: docker/php
+      args:
+        PHP_VERSION: ${PHP_VERSION}
+    working_dir: /home/wwwroot/app
+    container_name: app_php
+    volumes:
+      - .:/home/wwwroot/app
+    environment:
+      - maildev_host=app_maildev
+    depends_on:
+      - maildev
+      - database
+
+  phpmyadmin:
+    # for run on M1 chip  # args
+    platform: ${M1_CHIP}
+    image: phpmyadmin/phpmyadmin
+    container_name: app_phpmyadmin
+    # args expose
+    ports:
+      - 8585:80
+    environment:
+      PMA_HOST: database
+      # args
+      PMA_PORT: 3306
+      # args
+      MYSQL_ROOT_PASSWORD: root
+      # args
+      MYSQL_DATABASE: app_db
+      # args
+      MYSQL_USER: app_db_user
+      # args
+      MYSQL_PASSWORD: app_db_password
+    links:
+      - database
+    depends_on:
+      - database
+
+  maildev:
+    # for run on M1 chip
+    platform: ${M1_CHIP}
+    image: djfarrelly/maildev
+    container_name: app_maildev
+    # args
+    ports:
+      - 8787:80
